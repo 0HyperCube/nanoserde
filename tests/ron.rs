@@ -8,12 +8,14 @@ fn ron_de() {
         b: f32,
         c: Option<String>,
         d: Option<String>,
+        e: u128,
     }
 
     let ron = r#"(
         a: 1,
         b: 2.0,
         d: "hello",
+        e: 2000000000000000000000000000000000000
     )"#;
 
     let test: Test = DeRon::deserialize_ron(ron).unwrap();
@@ -21,6 +23,7 @@ fn ron_de() {
     assert_eq!(test.b, 2.);
     assert_eq!(test.c, None);
     assert_eq!(test.d.unwrap(), "hello");
+    assert_eq!(test.e, 2000000000000000000000000000000000000);
 }
 
 #[test]

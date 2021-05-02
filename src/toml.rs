@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, u128};
 use std::str::Chars;
 
 /// A parser for TOML string values.
@@ -21,8 +21,8 @@ pub struct TomlParser {
 pub enum TomlTok {
     Ident(String),
     Str(String),
-    U64(u64),
-    I64(i64),
+    U128(u128),
+    I128(i128),
     F64(f64),
     Bool(bool),
     Nan(bool),
@@ -138,8 +138,8 @@ impl TomlParser {
                 Ok(Toml::Array(vals))
             }
             TomlTok::Str(v) => Ok(Toml::Str(v)),
-            TomlTok::U64(v) => Ok(Toml::Num(v as f64)),
-            TomlTok::I64(v) => Ok(Toml::Num(v as f64)),
+            TomlTok::U128(v) => Ok(Toml::Num(v as f64)),
+            TomlTok::I128(v) => Ok(Toml::Num(v as f64)),
             TomlTok::F64(v) => Ok(Toml::Num(v as f64)),
             TomlTok::Bool(v) => Ok(Toml::Bool(v)),
             TomlTok::Nan(v) => Ok(Toml::Num(if v { -std::f64::NAN } else { std::f64::NAN })),
@@ -306,13 +306,13 @@ impl TomlParser {
                     } else {
                         if is_neg {
                             if let Ok(num) = num.parse() {
-                                return Ok(TomlTok::I64(num));
+                                return Ok(TomlTok::I128(num));
                             } else {
                                 return Err(self.err_parse("number"));
                             }
                         }
                         if let Ok(num) = num.parse() {
-                            return Ok(TomlTok::U64(num));
+                            return Ok(TomlTok::U128(num));
                         } else {
                             return Err(self.err_parse("number"));
                         }

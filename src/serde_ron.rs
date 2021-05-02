@@ -92,8 +92,8 @@ pub trait DeRon: Sized {
 pub enum DeRonTok {
     Ident,
     Str,
-    U64(u64),
-    I64(i64),
+    U128(u128),
+    I128(i128),
     F64(f64),
     Bool(bool),
     Char(char),
@@ -341,8 +341,8 @@ impl DeRonState {
         Err(self.err_token("}"))
     }
 
-    pub fn u64_range(&mut self, max: u64) -> Result<u64, DeRonErr> {
-        if let DeRonTok::U64(value) = self.tok {
+    pub fn u128_range(&mut self, max: u128) -> Result<u128, DeRonErr> {
+        if let DeRonTok::U128(value) = self.tok {
             if value > max {
                 return Err(self.err_range(&format!("{}>{}", value, max)));
             }
@@ -351,27 +351,27 @@ impl DeRonState {
         Err(self.err_token("unsigned integer"))
     }
 
-    pub fn i64_range(&mut self, min: i64, max: i64) -> Result<i64, DeRonErr> {
-        if let DeRonTok::I64(value) = self.tok {
+    pub fn i128_range(&mut self, min: i128, max: i128) -> Result<i128, DeRonErr> {
+        if let DeRonTok::I128(value) = self.tok {
             if value < min {
                 return Err(self.err_range(&format!("{}<{}", value, min)));
             }
             return Ok(value);
         }
-        if let DeRonTok::U64(value) = self.tok {
-            if value as i64 > max {
+        if let DeRonTok::U128(value) = self.tok {
+            if value as i128 > max {
                 return Err(self.err_range(&format!("{}>{}", value, max)));
             }
-            return Ok(value as i64);
+            return Ok(value as i128);
         }
         Err(self.err_token("signed integer"))
     }
 
     pub fn as_f64(&mut self) -> Result<f64, DeRonErr> {
-        if let DeRonTok::I64(value) = self.tok {
+        if let DeRonTok::I128(value) = self.tok {
             return Ok(value as f64);
         }
-        if let DeRonTok::U64(value) = self.tok {
+        if let DeRonTok::U128(value) = self.tok {
             return Ok(value as f64);
         }
         if let DeRonTok::F64(value) = self.tok {
@@ -384,7 +384,7 @@ impl DeRonState {
         if let DeRonTok::Bool(value) = self.tok {
             return Ok(value);
         }
-        if let DeRonTok::U64(value) = self.tok {
+        if let DeRonTok::U128(value) = self.tok {
             return Ok(value != 0);
         }
         Err(self.err_token("boolean"))
@@ -526,14 +526,14 @@ impl DeRonState {
                     } else {
                         if is_neg {
                             if let Ok(num) = self.numbuf.parse() {
-                                self.tok = DeRonTok::I64(num);
+                                self.tok = DeRonTok::I128(num);
                                 return Ok(());
                             } else {
                                 return Err(self.err_parse("number"));
                             }
                         }
                         if let Ok(num) = self.numbuf.parse() {
-                            self.tok = DeRonTok::U64(num);
+                            self.tok = DeRonTok::U128(num);
                             return Ok(());
                         } else {
                             return Err(self.err_parse("number"));
@@ -687,7 +687,7 @@ macro_rules! impl_ser_de_ron_unsigned {
         impl DeRon for $ty {
             fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<$ty, DeRonErr> {
                 //s.is_prefix(p, i) ?;
-                let val = s.u64_range($max as u64)?;
+                let val = s.u128_range($max as u128)?;
                 s.next_tok(i)?;
                 return Ok(val as $ty);
             }
@@ -706,7 +706,7 @@ macro_rules! impl_ser_de_ron_signed {
         impl DeRon for $ty {
             fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<$ty, DeRonErr> {
                 //s.is_prefix(p, i) ?;
-                let val = s.i64_range($min as i64, $max as i64)?;
+                let val = s.i128_range($min as i128, $max as i128)?;
                 s.next_tok(i)?;
                 return Ok(val as $ty);
             }
