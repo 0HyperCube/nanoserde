@@ -112,13 +112,36 @@ pub fn derive_de_ron_named(
     let mut struct_field_names = Vec::new();
     let mut ron_field_names = Vec::new();
 
-    let container_attr_default = shared::attrs_default(attributes);
+    let container_attr_default = shared::attrs_default(attributes).is_some();
 
     let mut unwraps = Vec::new();
     for field in fields {
         let struct_fieldname = field.field_name.as_ref().unwrap().to_string();
         let localvar = format!("_{}", struct_fieldname);
         let field_attr_default = shared::attrs_default(&field.attributes);
+        let field_attr_default_with = shared::attrs_default_with(&field.attributes);
+        let default_val = if let Some(v) = field_attr_default {
+            if let Some(mut val) = v {
+                if field.ty.path == "String" {
+                    val = format!("\"{}\".to_string()", val)
+                }
+                if field.ty.is_option {
+                    val = format!("Some({})", val);
+                }
+                Some(val)
+            } else {
+                if !field.ty.is_option {
+                    Some(String::from("Default::default()"))
+                } else {
+                    Some(String::from("None"))
+                }
+            }
+        } else if let Some(mut v) = field_attr_default_with {
+            v.push_str("()");
+            Some(v)
+        } else {
+            None
+        };
         let ron_fieldname =
             shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone());
 
@@ -128,21 +151,23 @@ pub fn derive_de_ron_named(
                     if let Some(t) = {} {{
                         t
                     }} else {{
-                        None
+                        {}
                     }}
                 }}",
-                localvar
+                localvar,
+                default_val.unwrap_or_else(|| String::from("None"))
             ));
-        } else if container_attr_default || field_attr_default {
+        } else if container_attr_default || default_val.is_some() {
             unwraps.push(format!(
                 "{{
                     if let Some(t) = {} {{
                         t
                     }} else {{
-                        Default::default()
+                        {}
                     }}
                 }}",
-                localvar
+                localvar,
+                default_val.unwrap_or_else(|| String::from("Default::default()"))
             ));
         } else {
             unwraps.push(format!(
@@ -208,7 +233,7 @@ pub fn derive_de_ron_named(
             }};
             s.paren_close(i)?;
             {} {{
-                {}  
+                {}
             }}
         }}",
         local_lets, match_names, name, body

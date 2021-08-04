@@ -24,6 +24,39 @@ fn de() {
 }
 
 #[test]
+fn de_options() {
+    #[derive(DeJson)]
+    pub struct Test {
+        a: Option<String>,
+        b: Option<String>,
+    }
+
+    let json = r#"{
+        "a": "asd",
+        "b": "qwe",
+    }"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, Some("asd".to_string()));
+    assert_eq!(test.b, Some("qwe".to_string()));
+}
+
+#[test]
+fn de_option_one_field() {
+    #[derive(DeJson)]
+    pub struct Test {
+        a: Option<String>,
+    }
+
+    let json = r#"{
+        "a": "asd",
+    }"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, Some("asd".to_string()));
+}
+
+#[test]
 fn de_non_exhaustive() {
     #[derive(DeJson)]
     pub struct Test {
@@ -87,17 +120,31 @@ fn rename() {
         #[nserde(rename = "fooField")]
         pub a: i32,
         #[nserde(rename = "barField")]
-        pub b: i32,
+        pub b: Bar,
+    }
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub enum Bar {
+        #[nserde(rename = "fooValue")]
+        A,
+        #[nserde(rename = "barValue")]
+        B,
+    }
+
+    impl Default for Bar {
+        fn default() -> Self {
+            Self::A
+        }
     }
 
     let json = r#"{
         "fooField": 1,
-        "barField": 2,
+        "barField": "fooValue",
     }"#;
 
     let test: Test = DeJson::deserialize_json(json).unwrap();
     assert_eq!(test.a, 1);
-    assert_eq!(test.b, 2);
+    assert_eq!(test.b, Bar::A);
 
     let bytes = SerJson::serialize_json(&test);
     let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
@@ -122,18 +169,40 @@ fn de_field_default() {
         #[nserde(default)]
         foo: Foo,
         foo2: Foo,
+        #[nserde(default = 4.0)]
         b: f32,
+        #[nserde(default_with = "some_value")]
+        c: f32,
+        #[nserde(default = 1)]
+        d: i32,
+        #[nserde(default = "hello")]
+        e: String,
+        #[nserde(default = "Foo{x:3}")]
+        f: Foo,
+        #[nserde(default = 5)]
+        g: Option<i32>,
+        #[nserde(default = "world")]
+        h: Option<String>,
+    }
+
+    fn some_value() -> f32 {
+        3.0
     }
 
     let json = r#"{
         "a": 1,
-        "b": 2.,
         "foo2": { "x": 3 }
     }"#;
 
     let test: Test = DeJson::deserialize_json(json).unwrap();
     assert_eq!(test.a, 1);
-    assert_eq!(test.b, 2.);
+    assert_eq!(test.b, 4.0);
+    assert_eq!(test.c, 3.0);
+    assert_eq!(test.d, 1);
+    assert_eq!(test.e, "hello");
+    assert_eq!(test.f.x, 3);
+    assert_eq!(test.g, Some(5));
+    assert_eq!(test.h, Some(String::from("world")));
     assert_eq!(test.foo.x, 23);
     assert_eq!(test.foo2.x, 3);
 }
@@ -314,7 +383,7 @@ fn exponents() {
         f: f64,
         g: f64,
         h: f64,
-    };
+    }
 
     let json = r#"{
         "a": 1e2,
@@ -399,7 +468,7 @@ fn de_enum() {
 
     let json = r#"
        {
-          "foo1": { "A": [] },
+          "foo1": "A",
           "foo2": { "B": [ 1, "asd" ] },
           "foo3": { "C": { "a": 2, "b": "qwe" } }
        }
@@ -436,7 +505,7 @@ fn de_ser_enum() {
 
     let json = r#"
        {
-          "foo1": { "A": [] },
+          "foo1": "A",
           "foo2": { "B": {"x": 5} },
           "foo3": { "C": [6, "HELLO"] }
        }
@@ -539,7 +608,7 @@ fn tuple_struct() {
     #[derive(DeJson, SerJson, PartialEq)]
     pub struct Foo {
         x: Test,
-    };
+    }
 
     let test = Foo { x: Test(5) };
     let bytes = SerJson::serialize_json(&test);
@@ -560,7 +629,7 @@ fn tuple_struct_transparent() {
     #[derive(DeJson, SerJson, PartialEq)]
     pub struct Foo {
         x: Test,
-    };
+    }
 
     let test = Foo { x: Test(5) };
     let bytes = SerJson::serialize_json(&test);
